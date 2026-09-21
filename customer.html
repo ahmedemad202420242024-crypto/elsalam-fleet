@@ -28,8 +28,8 @@
     </div>
 
     <script>
-        // ضع هنا رابط الـ Web App الخاص بك من جوجل سكريبت
-        const WEB_APP_URL = "ضع_رابط_الـ_Web_App_هنا";
+        // ضع هنا رابط الـ Web App الصحيح الذي ينتهي بـ /exec
+        const WEB_APP_URL = "PUT_YOUR_WEB_APP_URL_HERE";
 
         const urlParams = new URLSearchParams(window.location.search);
         const tripId = urlParams.get('tripId');
@@ -52,9 +52,9 @@
                         document.getElementById('statusMsg').innerText = "السيارة في الطريق إليك 🚗";
                         document.getElementById('tripDetails').innerHTML = `
                             <b>كود الرحلة:</b> ${data.tripId} <br>
-                            <b>اسم السائق:</b> ${data.driverName} <br>
-                            <b>نوع السيارة:</b> ${data.carType} <br>
-                            <b>آخر تحديث:</b> ${new Date(data.lastUpdate).toLocaleTimeString()}
+                            <b>اسم العميل:</b> ${data.clientName || '--'} <br>
+                            <b>اسم السائق:</b> ${data.driverName || '--'} <br>
+                            <b>آخر تحديث:</b> ${data.lastUpdate ? new Date(data.lastUpdate).toLocaleTimeString() : '--'}
                         `;
 
                         const lat = data.lat;
