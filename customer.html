@@ -9,7 +9,7 @@
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0px 4px 15px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
         .status-box { font-size: 16px; font-weight: bold; color: #007bff; margin-bottom: 15px; padding: 12px; background: #e7f1ff; border-radius: 8px; }
         .info { font-size: 14px; color: #444; margin-bottom: 15px; text-align: right; line-height: 1.6; padding: 0 10px; }
-        #mapContainer { width: 100%; height: 400px; border-radius: 8px; border: 1px solid #ccc; overflow: hidden; }
+        #mapContainer { width: 100%; height: 400px; border-radius: 8px; border: 1px solid #ccc; overflow: hidden; background: #eee; }
         iframe { width: 100%; height: 100%; border: 0; }
         .error { color: #dc3545; background: #f8d7da; }
     </style>
@@ -18,7 +18,7 @@
 
     <div class="card">
         <h2>متابعة موقع الشحنة لحظياً</h2>
-        <div class="status-box" id="statusMsg">جاري الاتصال بالنظام...</div>
+        <div class="status-box" id="statusMsg">جاري جلب بيانات الرحلة...</div>
         
         <div class="info" id="tripDetails"></div>
 
@@ -28,51 +28,61 @@
     </div>
 
     <script>
-        // ضع هنا رابط الـ Web App الصحيح الذي ينتهي بـ /exec
+        // ضع هنا رابط الـ Web App الصحيح الخاص بك
         const WEB_APP_URL = "PUT_YOUR_WEB_APP_URL_HERE";
 
         const urlParams = new URLSearchParams(window.location.search);
         const tripId = urlParams.get('tripId');
 
         if (!tripId) {
-            document.getElementById('statusMsg').className = "status-box error";
+            document.getElementById('statusMsgclassName = "status-box error";
             document.getElementById('statusMsg').innerText = "خطأ: لم يتم العثور على كود الرحلة في الرابط!";
         } else {
             fetchTripLocation();
-            setInterval(fetchTripLocation, 10000);
+            setInterval(fetchTripLocation, 10000); // تحديث كل 10 ثواني
         }
 
         function fetchTripLocation() {
-            const requestUrl = `${WEB_APP_URL}?action=getLocation&tripId=${encodeURIComponent(tripId)}`;
+            const callbackName = 'cb_' + Math.round(100000 * Math.random());
+            const requestUrl = `${WEB_APP_URL}?action=getLocation&tripId=${encodeURIComponent(tripId)}&callback=${callbackName}`;
 
-            fetch(requestUrl)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.found) {
-                        document.getElementById('statusMsg').innerText = "السيارة في الطريق إليك 🚗";
-                        document.getElementById('tripDetails').innerHTML = `
-                            <b>كود الرحلة:</b> ${data.tripId} <br>
-                            <b>اسم العميل:</b> ${data.clientName || '--'} <br>
-                            <b>اسم السائق:</b> ${data.driverName || '--'} <br>
-                            <b>آخر تحديث:</b> ${data.lastUpdate ? new Date(data.lastUpdate).toLocaleTimeString() : '--'}
-                        `;
+            // استخدام طريقة JSONP لتجاوز قيود CORS نهائياً وعرض البيانات فوراً
+            window[callbackName] = function(data) {
+                delete window[callbackName];
+                document.body.removeChild(scriptTag);
 
-                        const lat = data.lat;
-                        const lng = data.lng;
-                        if (lat && lng) {
-                            const mapUrl = `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+                if (data && data.found) {
+                    document.getElementById('statusMsg').className = "status-box";
+                    document.getElementById('statusMsg').innerText = "السيارة في الطريق إليك 🚗";
+                    document.getElementById('tripDetails').innerHTML = `
+                        <b>كود الرحلة:</b> ${data.tripId} <br>
+                        <b>اسم العميل:</b> ${data.clientName || '--'} <br>
+                        <b>اسم السائق:</b> ${data.driverName || '--'} <br>
+                        <b>آخر تحديث:</b> ${data.lastUpdate ? new Date(data.lastUpdate).toLocaleTimeString() : '--'}
+                    `;
+
+                    const lat = data.lat;
+                    const lng = data.lng;
+                    if (lat && lng) {
+                        const mapUrl = `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+                        if (document.getElementById('mapFrame').src !== mapUrl) {
                             document.getElementById('mapFrame').src = mapUrl;
-                        } else {
-                            document.getElementById('statusMsg').innerText = "في انتظار بدء إرسال الإحداثيات من السائق...";
                         }
                     } else {
-                        document.getElementById('statusMsg').innerText = "لم يتم العثور على رحلة بهذا الكود أو أن الرحلة لم تبدأ بعد.";
+                        document.getElementById('statusMsg').innerText = "في انتظار بدء إرسال الإحداثيات من السائق...";
                     }
-                })
-                .catch(err => {
-                    console.error("خطأ:", err);
-                    document.getElementById('statusMsg').innerText = "جاري إعادة محاولة الاتصال...";
-                });
+                } else {
+                    document.getElementById('statusMsg').className = "status-box error";
+                    document.getElementById('statusMsg').innerText = "لم يتم العثور على رحلة بهذا الكود في جدول البيانات.";
+                }
+            };
+
+            const scriptTag = document.createElement('script');
+            scriptTag.src = requestUrl;
+            scriptTag.onerror = function() {
+                document.getElementById('statusMsg').innerText = "تعذر الاتصال بالخادم، جاري إعادة المحاولة...";
+            };
+            document.body.appendChild(scriptTag);
         }
     </script>
 
