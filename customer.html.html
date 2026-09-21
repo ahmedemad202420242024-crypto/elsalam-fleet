@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شركة السلام - تتبع الرحلة</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; text-align: center; background-color: #f4f6f9; padding: 15px; margin: 0; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0px 4px 15px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
+        .status-box { font-size: 16px; font-weight: bold; color: #007bff; margin-bottom: 15px; padding: 12px; background: #e7f1ff; border-radius: 8px; }
+        .info { font-size: 14px; color: #444; margin-bottom: 15px; text-align: right; line-height: 1.6; padding: 0 10px; }
+        #mapContainer { width: 100%; height: 400px; border-radius: 8px; border: 1px solid #ccc; overflow: hidden; }
+        iframe { width: 100%; height: 100%; border: 0; }
+        .error { color: #dc3545; background: #f8d7da; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>متابعة موقع الشحنة لحظياً</h2>
+        <div class="status-box" id="statusMsg">جاري الاتصال بالنظام...</div>
+        
+        <div class="info" id="tripDetails"></div>
+
+        <div id="mapContainer">
+            <iframe id="mapFrame" src="" allowfullscreen></iframe>
+        </div>
+    </div>
+
+    <script>
+        // ضع هنا رابط الـ Web App الخاص بك من جوجل سكريبت
+        const WEB_APP_URL = "ضع_رابط_الـ_Web_App_هنا";
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const tripId = urlParams.get('tripId');
+
+        if (!tripId) {
+            document.getElementById('statusMsg').className = "status-box error";
+            document.getElementById('statusMsg').innerText = "خطأ: لم يتم العثور على كود الرحلة في الرابط!";
+        } else {
+            fetchTripLocation();
+            setInterval(fetchTripLocation, 10000);
+        }
+
+        function fetchTripLocation() {
+            const requestUrl = `${WEB_APP_URL}?action=getLocation&tripId=${encodeURIComponent(tripId)}`;
+
+            fetch(requestUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.found) {
+                        document.getElementById('statusMsg').innerText = "السيارة في الطريق إليك 🚗";
+                        document.getElementById('tripDetails').innerHTML = `
+                            <b>كود الرحلة:</b> ${data.tripId} <br>
+                            <b>اسم السائق:</b> ${data.driverName} <br>
+                            <b>نوع السيارة:</b> ${data.carType} <br>
+                            <b>آخر تحديث:</b> ${new Date(data.lastUpdate).toLocaleTimeString()}
+                        `;
+
+                        const lat = data.lat;
+                        const lng = data.lng;
+                        if (lat && lng) {
+                            const mapUrl = `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+                            document.getElementById('mapFrame').src = mapUrl;
+                        } else {
+                            document.getElementById('statusMsg').innerText = "في انتظار بدء إرسال الإحداثيات من السائق...";
+                        }
+                    } else {
+                        document.getElementById('statusMsg').innerText = "لم يتم العثور على رحلة بهذا الكود أو أن الرحلة لم تبدأ بعد.";
+                    }
+                })
+                .catch(err => {
+                    console.error("خطأ:", err);
+                    document.getElementById('statusMsg').innerText = "جاري إعادة محاولة الاتصال...";
+                });
+        }
+    </script>
+
+</body>
+</html>
